@@ -1,6 +1,3 @@
-// Emulador GBA en el navegador usando EmulatorJS (núcleo mGBA).
-// El ROM lo elige la persona usuaria y se carga localmente como blob: nunca se sube a ningún sitio.
-
 const DATA_PATH = 'https://cdn.emulatorjs.org/stable/data/';
 
 const input = document.getElementById('rom-input');
@@ -9,6 +6,9 @@ const picker = document.getElementById('picker');
 const stage = document.getElementById('stage');
 const errorBox = document.getElementById('error');
 const changeBtn = document.getElementById('change');
+const urlForm = document.getElementById('url-form');
+const urlInput = document.getElementById('url-input');
+const urlBtn = document.getElementById('url-btn');
 
 const VALID = /\.(gba|zip|7z)$/i;
 
@@ -18,23 +18,54 @@ function showError(msg) {
 }
 
 function startGame(file) {
-  errorBox.hidden = true;
-
   if (!VALID.test(file.name)) {
     showError('Ese archivo no parece un ROM de GBA. Elige un .gba (o un .zip que lo contenga).');
     return;
   }
+  launch(file, file.name);
+}
 
-  const url = URL.createObjectURL(file);
+async function startFromUrl(rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error();
+  } catch {
+    showError('La URL no es válida. Debe empezar por https://');
+    return;
+  }
+
+  const name = decodeURIComponent(url.pathname.split('/').pop() || 'juego.gba');
+  if (!VALID.test(name)) {
+    showError('La URL debe apuntar a un archivo .gba (o .zip).');
+    return;
+  }
+
+  urlBtn.disabled = true;
+  urlBtn.textContent = 'Descargando…';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    launch(await res.blob(), name);
+  } catch {
+    showError('No se pudo descargar el ROM. Comprueba el enlace y que el servidor permita CORS.');
+  } finally {
+    urlBtn.disabled = false;
+    urlBtn.textContent = 'Cargar desde URL';
+  }
+}
+
+function launch(blob, fileName) {
+  errorBox.hidden = true;
+  const url = URL.createObjectURL(blob);
 
   picker.hidden = true;
   stage.hidden = false;
 
-  // Configuración global que lee el loader de EmulatorJS
   window.EJS_player = '#game';
   window.EJS_core = 'gba';
   window.EJS_gameUrl = url;
-  window.EJS_gameName = file.name.replace(/\.[^.]+$/, '');
+  window.EJS_gameName = fileName.replace(/\.[^.]+$/, '');
   window.EJS_pathtodata = DATA_PATH;
   window.EJS_startOnLoaded = true;
   window.EJS_language = 'es-ES';
@@ -55,7 +86,6 @@ input.addEventListener('change', () => {
   if (input.files[0]) startGame(input.files[0]);
 });
 
-// Arrastrar y soltar
 ['dragenter', 'dragover'].forEach((ev) =>
   slot.addEventListener(ev, (e) => {
     e.preventDefault();
@@ -73,7 +103,6 @@ slot.addEventListener('drop', (e) => {
   if (file) startGame(file);
 });
 
-// Accesibilidad: abrir el selector con Enter/Espacio
 slot.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
@@ -81,5 +110,15 @@ slot.addEventListener('keydown', (e) => {
   }
 });
 
-// EmulatorJS no se puede reiniciar limpiamente, así que recargamos la página
 changeBtn.addEventListener('click', () => location.reload());
+
+urlForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (urlInput.value.trim()) startFromUrl(urlInput.value.trim());
+});
+
+const romParam = new URLSearchParams(location.search).get('rom');
+if (romParam) {
+  urlInput.value = romParam;
+  startFromUrl(romParam);
+}
