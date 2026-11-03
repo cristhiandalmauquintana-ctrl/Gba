@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Emulador GBA en el navegador</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <h1>Emulador GBA</h1>
+        <p class="lead">Elige un archivo <code>.gba</code> de tu equipo. Se queda en tu navegador: no se sube a ningún servidor.</p>
+      </header>
+
+      <section id="picker" class="picker">
+        <label id="slot" class="slot" for="rom-input" tabindex="0">
+          <span class="slot-title">Insertar cartucho</span>
+          <span class="slot-hint">Arrastra tu .gba aquí o toca para elegirlo</span>
+        </label>
+        <input id="rom-input" type="file" accept=".gba,.zip,.7z" hidden />
+        <p id="error" class="error" role="alert" hidden></p>
+      </section>
+
+      <section id="stage" class="stage" hidden>
+        <div id="game"></div>
+        <button id="change" class="btn" type="button">Cambiar juego</button>
+      </section>
+
+      <footer>
+        <p>Usa solo juegos que tengas legítimamente. Este proyecto no incluye ni distribuye ROMs.</p>
+        <p>Teclado: flechas, <kbd>X</kbd> = A, <kbd>Z</kbd> = B, <kbd>Enter</kbd> = Start, <kbd>Shift</kbd> = Select.</p>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
