@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jugador</title>
+    <style>
+      html, body, #game { margin: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+      body { color: #fff; font-family: system-ui, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <script>
+      (function () {
+        var id = new URLSearchParams(location.search).get('id');
+        var open = indexedDB.open('retro-os', 1);
+        open.onupgradeneeded = function () { open.result.createObjectStore('games', { keyPath: 'id' }); };
+        open.onerror = fail;
+        open.onsuccess = function () {
+          var req = open.result.transaction('games').objectStore('games').get(id);
+          req.onerror = fail;
+          req.onsuccess = function () { req.result ? start(req.result) : fail(); };
+        };
+        function fail() { document.body.textContent = 'No se encontró el juego.'; }
+        function start(g) {
+          window.EJS_player = '#game';
+          window.EJS_core = g.system;
+          window.EJS_gameUrl = URL.createObjectURL(g.blob);
+          window.EJS_gameName = g.title;
+          window.EJS_pathtodata = 'emulatorjs/data/';
+          window.EJS_startOnLoaded = true;
+          window.EJS_language = 'es-ES';
+          window.EJS_color = '#4b3f8f';
+          window.EJS_threads = false;
+          var s = document.createElement('script');
+          s.src = 'emulatorjs/data/loader.js';
+          s.onerror = function () { document.body.textContent = 'No se pudo cargar el emulador.'; };
+          document.body.appendChild(s);
+        }
+      })();
+    </script>
+  </body>
+</html>
