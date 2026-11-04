@@ -3,42 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Emulador GBA en el navegador</title>
+    <title>Retro OS</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <main class="shell">
-      <header>
-        <h1>Emulador GBA</h1>
-        <p class="lead">Elige un archivo <code>.gba</code> de tu equipo. Se queda en tu navegador: no se sube a ningún servidor.</p>
-      </header>
+    <header class="bar"><span>Retro OS</span><span id="clock"></span></header>
+    <main id="icons" class="icons"></main>
+    <footer class="legal">
+      <p>Este proyecto no incluye ROMs comerciales. La tienda solo ofrece juegos de libre distribución, con su licencia y fuente visibles.</p>
+    </footer>
 
-      <section id="picker" class="picker">
-        <label id="slot" class="slot" for="rom-input" tabindex="0">
-          <span class="slot-title">Insertar cartucho</span>
-          <span class="slot-hint">Arrastra tu .gba aquí o toca para elegirlo</span>
-        </label>
-        <input id="rom-input" type="file" accept=".gba,.zip,.7z" hidden />
-        <form id="url-form" class="url-form">
-          <label for="url-input">O carga un ROM de libre distribución desde un enlace</label>
-          <div class="url-row">
-            <input id="url-input" type="url" placeholder="https://raw.githubusercontent.com/.../juego.gba" />
-            <button id="url-btn" class="btn" type="submit">Cargar desde URL</button>
-          </div>
-        </form>
-        <p id="error" class="error" role="alert" hidden></p>
-      </section>
+    <section id="win" class="win" hidden>
+      <div class="win-bar">
+        <strong id="win-title"></strong>
+        <button id="win-close" type="button" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="win-body" class="win-body"></div>
+    </section>
 
-      <section id="stage" class="stage" hidden>
-        <div id="game"></div>
-        <button id="change" class="btn" type="button">Cambiar juego</button>
-      </section>
-
-      <footer>
-        <p>Usa solo juegos que tengas legítimamente. Este proyecto no incluye ni distribuye ROMs.</p>
-        <p>Teclado: flechas, <kbd>X</kbd> = A, <kbd>Z</kbd> = B, <kbd>Enter</kbd> = Start, <kbd>Shift</kbd> = Select.</p>
-      </footer>
-    </main>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
