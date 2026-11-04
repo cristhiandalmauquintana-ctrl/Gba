@@ -19,6 +19,13 @@
           <span class="slot-hint">Arrastra tu .gba aquí o toca para elegirlo</span>
         </label>
         <input id="rom-input" type="file" accept=".gba,.zip,.7z" hidden />
+        <form id="url-form" class="url-form">
+          <label for="url-input">O carga un ROM de libre distribución desde un enlace</label>
+          <div class="url-row">
+            <input id="url-input" type="url" placeholder="https://raw.githubusercontent.com/.../juego.gba" />
+            <button id="url-btn" class="btn" type="submit">Cargar desde URL</button>
+          </div>
+        </form>
         <p id="error" class="error" role="alert" hidden></p>
       </section>
 
