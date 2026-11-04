@@ -1,3 +1,14 @@
 {
-  "games": []
+  "games": [
+    {
+      "id": "Pokemon-esmeralda",
+      "title": "pokemon esmeralda",
+      "system": "gba",
+      "file": "roms/[Poke-Nexus] Pokemon - Edicion Esmeralda (Esp) (1).gba",
+      "author": "?????",
+      "license": "CC BY 4.0",
+      "sourceUrl": "https://pagina-donde-el-autor-lo-publica",
+      "description": "Una línea sobre el juego."
+    }
+  ]
 }
