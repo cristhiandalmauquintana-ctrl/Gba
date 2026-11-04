@@ -1,4 +1,4 @@
-const DATA_PATH = 'https://cdn.emulatorjs.org/stable/data/';
+const DATA_PATH = import.meta.env.BASE_URL + 'emulatorjs/data/';
 
 const input = document.getElementById('rom-input');
 const slot = document.getElementById('slot');
