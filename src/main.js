@@ -1,124 +1,291 @@
-const DATA_PATH = import.meta.env.BASE_URL + 'emulatorjs/data/';
+const BASE = import.meta.env.BASE_URL;
+const STORE_URL = BASE + 'store/';
 
-const input = document.getElementById('rom-input');
-const slot = document.getElementById('slot');
-const picker = document.getElementById('picker');
-const stage = document.getElementById('stage');
-const errorBox = document.getElementById('error');
-const changeBtn = document.getElementById('change');
-const urlForm = document.getElementById('url-form');
-const urlInput = document.getElementById('url-input');
-const urlBtn = document.getElementById('url-btn');
+const SYSTEMS = {
+  gba: { name: 'Game Boy Advance', short: 'GBA', color: '#5b4bd6' },
+  nes: { name: 'NES', short: 'NES', color: '#c0392b' },
+  snes: { name: 'Super Nintendo', short: 'SNES', color: '#6c7a89' },
+  gb: { name: 'Game Boy / Color', short: 'GB', color: '#2e8b57' },
+  segaMD: { name: 'Sega Genesis', short: 'MD', color: '#1f6fb2' },
+};
 
-const VALID = /\.(gba|zip|7z)$/i;
+const EXT = {
+  gba: 'gba', nes: 'nes', sfc: 'snes', smc: 'snes',
+  gb: 'gb', gbc: 'gb', md: 'segaMD', gen: 'segaMD', smd: 'segaMD',
+};
 
-function showError(msg) {
-  errorBox.textContent = msg;
-  errorBox.hidden = false;
-}
+// ---------- utilidades ----------
+const $ = (s) => document.querySelector(s);
 
-function startGame(file) {
-  if (!VALID.test(file.name)) {
-    showError('Ese archivo no parece un ROM de GBA. Elige un .gba (o un .zip que lo contenga).');
-    return;
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) el.setAttribute(k, v);
   }
-  launch(file, file.name);
+  for (const kid of kids.flat()) el.append(kid instanceof Node ? kid : document.createTextNode(kid));
+  return el;
 }
 
-async function startFromUrl(rawUrl) {
-  let url;
+// ---------- almacenamiento local (IndexedDB) ----------
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open('retro-os', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('games', { keyPath: 'id' });
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+async function tx(mode, fn) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const t = db.transaction('games', mode);
+    const req = fn(t.objectStore('games'));
+    t.oncomplete = () => resolve(req?.result);
+    t.onerror = () => reject(t.error);
+  });
+}
+
+const putGame = (g) => tx('readwrite', (s) => s.put(g));
+const allGames = () => tx('readonly', (s) => s.getAll());
+const delGame = (id) => tx('readwrite', (s) => s.delete(id));
+
+// ---------- ventana ----------
+const win = $('#win');
+const winBody = $('#win-body');
+
+function openWin(title, node, flush = false) {
+  $('#win-title').textContent = title;
+  winBody.classList.toggle('flush', flush);
+  winBody.replaceChildren(node);
+  win.hidden = false;
+}
+
+function closeWin() {
+  win.hidden = true;
+  winBody.replaceChildren(); // al quitar el iframe se detiene el emulador
+}
+
+$('#win-close').addEventListener('click', closeWin);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !win.hidden) closeWin();
+});
+
+// ---------- jugar ----------
+function play(game) {
+  const frame = h('iframe', {
+    class: 'player',
+    src: `${BASE}player.html?id=${encodeURIComponent(game.id)}`,
+    allow: 'fullscreen; gamepad; autoplay',
+    title: game.title,
+  });
+  openWin(game.title, frame, true);
+}
+
+// ---------- Mis juegos ----------
+function openLibrary(filter) {
+  const title = filter ? SYSTEMS[filter].name : 'Mis juegos';
+  const list = h('div', { class: 'cards' });
+  const msg = h('p', { class: 'error', role: 'alert' });
+
+  const select = h(
+    'select',
+    { class: 'select', 'aria-label': 'Sistema' },
+    h('option', { value: 'auto' }, 'Sistema: automático'),
+    Object.entries(SYSTEMS).map(([id, s]) => h('option', { value: id }, s.name))
+  );
+  if (filter) select.value = filter;
+
+  const picker = h('input', {
+    type: 'file',
+    hidden: '',
+    accept: '.gba,.nes,.sfc,.smc,.gb,.gbc,.md,.gen,.smd,.zip',
+    onchange: async () => {
+      const file = picker.files[0];
+      if (!file) return;
+      const ext = file.name.split('.').pop().toLowerCase();
+      const system = select.value !== 'auto' ? select.value : EXT[ext];
+      if (!system) {
+        msg.textContent = 'No reconozco ese formato. Elige el sistema en el menú y vuelve a intentarlo.';
+        return;
+      }
+      msg.textContent = '';
+      await putGame({
+        id: 'local-' + Date.now(),
+        title: file.name.replace(/\.[^.]+$/, ''),
+        system,
+        name: file.name,
+        blob: file,
+        source: 'local',
+      });
+      picker.value = '';
+      render();
+    },
+  });
+
+  const toolbar = h(
+    'div',
+    { class: 'toolbar' },
+    select,
+    h('button', { class: 'btn', type: 'button', onclick: () => picker.click() }, '＋ Agregar mi ROM'),
+    picker
+  );
+
+  async function render() {
+    let games = await allGames();
+    if (filter) games = games.filter((g) => g.system === filter);
+    games.sort((a, b) => a.title.localeCompare(b.title));
+
+    if (!games.length) {
+      list.replaceChildren(h('p', { class: 'muted' }, 'Aún no hay juegos aquí. Instala uno desde la Tienda o agrega tu propio ROM.'));
+      return;
+    }
+    list.replaceChildren(
+      ...games.map((g) =>
+        h(
+          'article',
+          { class: 'card' },
+          h('span', { class: 'badge', style: `background:${SYSTEMS[g.system]?.color || '#555'}` }, SYSTEMS[g.system]?.short || '?'),
+          h('h3', {}, g.title),
+          h('p', { class: 'meta' }, g.source === 'store' ? `${g.author} · ${g.license}` : 'Archivo propio (solo en este navegador)'),
+          h(
+            'div',
+            { class: 'actions' },
+            h('button', { class: 'btn', type: 'button', onclick: () => play(g) }, 'Jugar'),
+            h(
+              'button',
+              {
+                class: 'btn ghost',
+                type: 'button',
+                onclick: async () => {
+                  if (confirm(`¿Eliminar "${g.title}" de este navegador?`)) {
+                    await delGame(g.id);
+                    render();
+                  }
+                },
+              },
+              'Eliminar'
+            )
+          )
+        )
+      )
+    );
+  }
+
+  openWin(title, h('div', {}, toolbar, msg, list));
+  render();
+}
+
+// ---------- Tienda ----------
+const REQUIRED = ['id', 'title', 'system', 'file', 'author', 'license', 'sourceUrl'];
+
+function isValid(g) {
+  if (!g || typeof g !== 'object') return false;
+  if (!REQUIRED.every((k) => typeof g[k] === 'string' && g[k].trim())) return false;
+  if (!/^[a-z0-9-]+$/.test(g.id)) return false;
+  if (!(g.system in SYSTEMS)) return false;
+  if (!/^https?:\/\//.test(g.sourceUrl)) return false;
+  if (g.file.startsWith('/') || g.file.includes('..')) return false;
+  return true;
+}
+
+async function openStore() {
+  const body = h('div', {}, h('p', { class: 'muted' }, 'Cargando catálogo…'));
+  openWin('Tienda', body);
+
+  let games;
   try {
-    url = new URL(rawUrl);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error();
+    const res = await fetch(STORE_URL + 'catalog.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error();
+    games = (await res.json()).games;
+    if (!Array.isArray(games)) throw new Error();
   } catch {
-    showError('La URL no es válida. Debe empezar por https://');
+    body.replaceChildren(h('p', { class: 'error' }, 'No se pudo cargar el catálogo. Revisa public/store/catalog.json.'));
     return;
   }
 
-  const name = decodeURIComponent(url.pathname.split('/').pop() || 'juego.gba');
-  if (!VALID.test(name)) {
-    showError('La URL debe apuntar a un archivo .gba (o .zip).');
-    return;
-  }
+  const valid = games.filter(isValid);
+  const hidden = games.length - valid.length;
+  const installed = new Set((await allGames()).map((g) => g.id));
 
-  urlBtn.disabled = true;
-  urlBtn.textContent = 'Descargando…';
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    launch(await res.blob(), name);
-  } catch {
-    showError('No se pudo descargar el ROM. Comprueba el enlace y que el servidor permita CORS.');
-  } finally {
-    urlBtn.disabled = false;
-    urlBtn.textContent = 'Cargar desde URL';
-  }
+  const cards = valid.map((g) => {
+    const key = 'store-' + g.id;
+    const btn = h('button', { class: 'btn', type: 'button' });
+
+    const setPlay = (record) => {
+      btn.textContent = 'Jugar';
+      btn.disabled = false;
+      btn.onclick = () => play(record);
+    };
+
+    const install = async () => {
+      btn.disabled = true;
+      btn.textContent = 'Instalando…';
+      try {
+        const res = await fetch(STORE_URL + g.file);
+        if (!res.ok) throw new Error();
+        const record = {
+          id: key, title: g.title, system: g.system, name: g.file.split('/').pop(),
+          blob: await res.blob(), source: 'store', author: g.author, license: g.license,
+        };
+        await putGame(record);
+        setPlay(record);
+      } catch {
+        btn.disabled = false;
+        btn.textContent = 'Error, reintentar';
+      }
+    };
+
+    if (installed.has(key)) {
+      btn.textContent = 'Jugar';
+      btn.onclick = async () => play((await allGames()).find((x) => x.id === key));
+    } else {
+      btn.textContent = 'Instalar';
+      btn.onclick = install;
+    }
+
+    return h(
+      'article',
+      { class: 'card' },
+      h('span', { class: 'badge', style: `background:${SYSTEMS[g.system].color}` }, SYSTEMS[g.system].short),
+      h('h3', {}, g.title),
+      g.description ? h('p', {}, g.description) : '',
+      h('p', { class: 'meta' }, `Autor: ${g.author}`),
+      h('p', { class: 'meta' }, `Licencia: ${g.license} · `, h('a', { href: g.sourceUrl, target: '_blank', rel: 'noopener noreferrer' }, 'Fuente')),
+      h('div', { class: 'actions' }, btn)
+    );
+  });
+
+  body.replaceChildren(
+    cards.length ? h('div', { class: 'cards' }, cards) : h('p', { class: 'muted' }, 'La tienda está vacía por ahora.'),
+    hidden ? h('p', { class: 'muted' }, `${hidden} juego(s) ocultos por no tener autor, licencia o fuente completos.`) : ''
+  );
 }
 
-function launch(blob, fileName) {
-  errorBox.hidden = true;
-  const url = URL.createObjectURL(blob);
+// ---------- escritorio ----------
+const apps = [
+  { label: 'Tienda', short: '🛒', color: '#e08a1e', open: openStore },
+  { label: 'Mis juegos', short: '🎮', color: '#3a7bd5', open: () => openLibrary() },
+  ...Object.entries(SYSTEMS).map(([id, s]) => ({
+    label: s.name, short: s.short, color: s.color, open: () => openLibrary(id),
+  })),
+];
 
-  picker.hidden = true;
-  stage.hidden = false;
-
-  window.EJS_player = '#game';
-  window.EJS_core = 'gba';
-  window.EJS_gameUrl = url;
-  window.EJS_gameName = fileName.replace(/\.[^.]+$/, '');
-  window.EJS_pathtodata = DATA_PATH;
-  window.EJS_startOnLoaded = true;
-  window.EJS_language = 'es-ES';
-  window.EJS_color = '#4b3f8f';
-  window.EJS_threads = false;
-
-  const script = document.createElement('script');
-  script.src = DATA_PATH + 'loader.js';
-  script.onerror = () => {
-    stage.hidden = true;
-    picker.hidden = false;
-    showError('No se pudo cargar el emulador. Revisa tu conexión e inténtalo de nuevo.');
-  };
-  document.body.appendChild(script);
-}
-
-input.addEventListener('change', () => {
-  if (input.files[0]) startGame(input.files[0]);
-});
-
-['dragenter', 'dragover'].forEach((ev) =>
-  slot.addEventListener(ev, (e) => {
-    e.preventDefault();
-    slot.classList.add('is-over');
-  })
+$('#icons').replaceChildren(
+  ...apps.map((a) =>
+    h(
+      'button',
+      { class: 'icon', type: 'button', onclick: a.open },
+      h('span', { class: 'icon-img', style: `background:${a.color}` }, a.short),
+      h('span', { class: 'icon-label' }, a.label)
+    )
+  )
 );
-['dragleave', 'drop'].forEach((ev) =>
-  slot.addEventListener(ev, (e) => {
-    e.preventDefault();
-    slot.classList.remove('is-over');
-  })
-);
-slot.addEventListener('drop', (e) => {
-  const file = e.dataTransfer?.files?.[0];
-  if (file) startGame(file);
-});
 
-slot.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    input.click();
-  }
-});
-
-changeBtn.addEventListener('click', () => location.reload());
-
-urlForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  if (urlInput.value.trim()) startFromUrl(urlInput.value.trim());
-});
-
-const romParam = new URLSearchParams(location.search).get('rom');
-if (romParam) {
-  urlInput.value = romParam;
-  startFromUrl(romParam);
+function tick() {
+  $('#clock').textContent = new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
 }
+tick();
+setInterval(tick, 30000);
