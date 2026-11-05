@@ -5,9 +5,9 @@
       "title": "pokemon esmeralda",
       "system": "gba",
       "file": "roms/[Poke-Nexus] Pokemon - Edicion Esmeralda (Esp) (1).gba",
-      "author": "?????",
-      "license": "CC BY 4.0",
-      "sourceUrl": "https://pagina-donde-el-autor-lo-publica",
+      "author": "GameFreak",
+      "license": "apache 1.2",
+      "sourceUrl": "https://wikipedia.com",
       "description": "Una línea sobre el juego."
     }
   ]
