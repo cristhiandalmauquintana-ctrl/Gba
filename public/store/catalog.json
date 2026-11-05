@@ -13,7 +13,7 @@
     {
       "id": "shinobi-iii",
       "title": "Shinobi III: Return of the Ninja Master",
-      "system": "genesis",
+      "system": "segaMD",
       "file": "shinobi3.ips",
       "author": "Sega",
       "license": "No especificada",
@@ -23,7 +23,7 @@
     {
       "id": "zelda-links-awakening",
       "title": "The Legend of Zelda: Link's Awakening",
-      "system": "gbc",
+      "system": "gb",
       "file": "legend of zelda-links awakening.gbc",
       "author": "Nintendo",
       "license": "No especificada",
