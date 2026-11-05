@@ -19,6 +19,26 @@
       "license": "No especificada",
       "sourceUrl": "https://es.wikipedia.org/wiki/The_Legend_of_Zelda:_The_Minish_Cap",
       "description": "Aventura de Zelda para Game Boy Advance con la mecánica de encogerse."
+    },
+    {
+      "id": "kirby-nightmare-in-dream-land",
+      "title": "Kirby: Nightmare in Dream Land",
+      "system": "gba",
+      "file": "roms/Kirby - Nightmare in Dream Land [GBA] Espanol.gba",
+      "author": "HAL Laboratory",
+      "license": "No especificada",
+      "sourceUrl": "https://es.wikipedia.org/wiki/Kirby:_Nightmare_in_Dream_Land",
+      "description": "Plataformas colorido de Kirby para Game Boy Advance, con habilidades copiables."
+    },
+    {
+      "id": "street-fighter-alpha-3",
+      "title": "Street Fighter Alpha 3",
+      "system": "gba",
+      "file": "roms/0899 - Street Fighter Alpha 3 (U)(Independent).gba",
+      "author": "Capcom",
+      "license": "No especificada",
+      "sourceUrl": "https://es.wikipedia.org/wiki/Street_Fighter_Alpha_3",
+      "description": "Juego de lucha de Capcom para Game Boy Advance con amplio elenco de personajes."
     }
   ]
 }
