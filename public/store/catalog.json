@@ -11,24 +11,14 @@
       "description": "Una línea sobre el juego."
     },
     {
-      "id": "shinobi-iii",
-      "title": "Shinobi III: Return of the Ninja Master",
-      "system": "segaMD",
-      "file": "roms/shinobi3.md",
-      "author": "Sega",
+      "id": "zelda-minish-cap",
+      "title": "The Legend of Zelda: The Minish Cap",
+      "system": "gba",
+      "file": "roms/The Legend of Zelda - The Minish Cap [GBA] Español.gba",
+      "author": "Capcom / Nintendo",
       "license": "No especificada",
-      "sourceUrl": "https://es.wikipedia.org/wiki/Shinobi_III:_Return_of_the_Ninja_Master",
-      "description": "Juego de acción y plataformas de ninjas para Sega Genesis."
-    },
-    {
-      "id": "zelda-links-awakening",
-      "title": "The Legend of Zelda: Link's Awakening",
-      "system": "gb",
-      "file": "roms/zelda-links-awakening.gbc",
-      "author": "Nintendo",
-      "license": "No especificada",
-      "sourceUrl": "https://es.wikipedia.org/wiki/The_Legend_of_Zelda:_Link%27s_Awakening",
-      "description": "Aventura clásica de Zelda para Game Boy Color."
+      "sourceUrl": "https://es.wikipedia.org/wiki/The_Legend_of_Zelda:_The_Minish_Cap",
+      "description": "Aventura de Zelda para Game Boy Advance con la mecánica de encogerse."
     }
   ]
 }
