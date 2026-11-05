@@ -136,20 +136,24 @@ function openLibrary(filter) {
   async function render() {
     let games = await allGames();
     if (filter) games = games.filter((g) => g.system === filter);
-    games.sort((a, b) => a.title.localeCompare(b.title));
+    games.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 
     if (!games.length) {
       list.replaceChildren(h('p', { class: 'muted' }, 'Aún no hay juegos aquí. Instala uno desde la Tienda o agrega tu propio ROM.'));
       return;
     }
     list.replaceChildren(
-      ...games.map((g) =>
-        h(
+      ...games.map((g) => {
+        const metaText =
+          g.source === 'store'
+            ? [g.author, g.license].filter(Boolean).join(' · ') || 'Tienda'
+            : 'Archivo propio (solo en este navegador)';
+        return h(
           'article',
           { class: 'card' },
           h('span', { class: 'badge', style: `background:${SYSTEMS[g.system]?.color || '#555'}` }, SYSTEMS[g.system]?.short || '?'),
-          h('h3', {}, g.title),
-          h('p', { class: 'meta' }, g.source === 'store' ? `${g.author} · ${g.license}` : 'Archivo propio (solo en este navegador)'),
+          h('h3', {}, g.title || g.name || 'Sin título'),
+          h('p', { class: 'meta' }, metaText),
           h(
             'div',
             { class: 'actions' },
@@ -160,7 +164,7 @@ function openLibrary(filter) {
                 class: 'btn ghost',
                 type: 'button',
                 onclick: async () => {
-                  if (confirm(`¿Eliminar "${g.title}" de este navegador?`)) {
+                  if (confirm(`¿Eliminar "${g.title || g.name}" de este navegador?`)) {
                     await delGame(g.id);
                     render();
                   }
@@ -169,8 +173,8 @@ function openLibrary(filter) {
               'Eliminar'
             )
           )
-        )
-      )
+        );
+      })
     );
   }
 
@@ -178,19 +182,7 @@ function openLibrary(filter) {
   render();
 }
 
-// ---------- Tienda ----------
-const REQUIRED = ['id', 'title', 'system', 'file', 'author', 'license', 'sourceUrl'];
-
-function isValid(g) {
-  if (!g || typeof g !== 'object') return false;
-  if (!REQUIRED.every((k) => typeof g[k] === 'string' && g[k].trim())) return false;
-  if (!/^[a-z0-9-]+$/.test(g.id)) return false;
-  if (!(g.system in SYSTEMS)) return false;
-  if (!/^https?:\/\//.test(g.sourceUrl)) return false;
-  if (g.file.startsWith('/') || g.file.includes('..')) return false;
-  return true;
-}
-
+// ---------- Tienda (sin validación: todo se muestra e instala) ----------
 async function openStore() {
   const body = h('div', {}, h('p', { class: 'muted' }, 'Cargando catálogo…'));
   openWin('Tienda', body);
@@ -206,12 +198,12 @@ async function openStore() {
     return;
   }
 
-  const valid = games.filter(isValid);
-  const hidden = games.length - valid.length;
   const installed = new Set((await allGames()).map((g) => g.id));
 
-  const cards = valid.map((g) => {
-    const key = 'store-' + g.id;
+  const cards = games.map((g, idx) => {
+    const sys = SYSTEMS[g.system];
+    // id estable aunque el catálogo no lo traiga
+    const key = 'store-' + (g.id || (g.file ? g.file.replace(/[^a-z0-9]+/gi, '-') : 'item-' + idx));
     const btn = h('button', { class: 'btn', type: 'button' });
 
     const setPlay = (record) => {
@@ -224,11 +216,18 @@ async function openStore() {
       btn.disabled = true;
       btn.textContent = 'Instalando…';
       try {
+        if (!g.file) throw new Error('sin archivo');
         const res = await fetch(STORE_URL + g.file);
         if (!res.ok) throw new Error();
         const record = {
-          id: key, title: g.title, system: g.system, name: g.file.split('/').pop(),
-          blob: await res.blob(), source: 'store', author: g.author, license: g.license,
+          id: key,
+          title: g.title || (g.file ? g.file.split('/').pop().replace(/\.[^.]+$/, '') : 'Sin título'),
+          system: g.system || 'gba',
+          name: g.file.split('/').pop(),
+          blob: await res.blob(),
+          source: 'store',
+          author: g.author || '',
+          license: g.license || '',
         };
         await putGame(record);
         setPlay(record);
@@ -246,21 +245,31 @@ async function openStore() {
       btn.onclick = install;
     }
 
+    const displayTitle = g.title || (g.file ? g.file.split('/').pop() : 'Sin título');
+    const metaParts = [];
+    if (g.author) metaParts.push(`Autor: ${g.author}`);
+    if (g.license) metaParts.push(`Licencia: ${g.license}`);
+
     return h(
       'article',
       { class: 'card' },
-      h('span', { class: 'badge', style: `background:${SYSTEMS[g.system].color}` }, SYSTEMS[g.system].short),
-      h('h3', {}, g.title),
+      h(
+        'span',
+        { class: 'badge', style: `background:${sys?.color || '#555'}` },
+        sys?.short || (g.system ? String(g.system).toUpperCase().slice(0, 4) : '?')
+      ),
+      h('h3', {}, displayTitle),
       g.description ? h('p', {}, g.description) : '',
-      h('p', { class: 'meta' }, `Autor: ${g.author}`),
-      h('p', { class: 'meta' }, `Licencia: ${g.license} · `, h('a', { href: g.sourceUrl, target: '_blank', rel: 'noopener noreferrer' }, 'Fuente')),
+      metaParts.length ? h('p', { class: 'meta' }, metaParts.join(' · ')) : '',
+      g.sourceUrl
+        ? h('p', { class: 'meta' }, h('a', { href: g.sourceUrl, target: '_blank', rel: 'noopener noreferrer' }, 'Fuente'))
+        : '',
       h('div', { class: 'actions' }, btn)
     );
   });
 
   body.replaceChildren(
-    cards.length ? h('div', { class: 'cards' }, cards) : h('p', { class: 'muted' }, 'La tienda está vacía por ahora.'),
-    hidden ? h('p', { class: 'muted' }, `${hidden} juego(s) ocultos por no tener autor, licencia o fuente completos.`) : ''
+    cards.length ? h('div', { class: 'cards' }, cards) : h('p', { class: 'muted' }, 'La tienda está vacía por ahora.')
   );
 }
 
