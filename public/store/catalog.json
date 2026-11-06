@@ -39,6 +39,26 @@
       "license": "No especificada",
       "sourceUrl": "https://es.wikipedia.org/wiki/Street_Fighter_Alpha_3",
       "description": "Juego de lucha de Capcom para Game Boy Advance con amplio elenco de personajes."
+    },
+    {
+      "id": "pokemon-rojo-fuego",
+      "title": "Pokémon Rojo Fuego",
+      "system": "gba",
+      "file": "roms/Pokemon - Rojo Fuego (Español).gba",
+      "author": "Game Freak",
+      "license": "No especificada",
+      "sourceUrl": "https://es.wikipedia.org/wiki/Pok%C3%A9mon_Rojo_Fuego_y_Verde_Hoja",
+      "description": "Remake definitivo de Kanto para GBA, con Islas Sete y mecánicas de tercera generación."
+    },
+    {
+      "id": "pokemon-verde-hoja",
+      "title": "Pokémon Verde Hoja",
+      "system": "gba",
+      "file": "roms/Pokemon - Verde Hoja (Español).gba",
+      "author": "Game Freak",
+      "license": "No especificada",
+      "sourceUrl": "https://es.wikipedia.org/wiki/Pok%C3%A9mon_Rojo_Fuego_y_Verde_Hoja",
+      "description": "Remake de Kanto con Pokémon exclusivos como Vulpix, Meowth y Magmar."
     }
   ]
 }
